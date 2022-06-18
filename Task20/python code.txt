@@ -1,0 +1,5 @@
+import picamera
+with picamera.PiCamera() as camera:
+    camera.start_preview()
+    camera.capture('test.jpg')
+    camera.stop_preview()

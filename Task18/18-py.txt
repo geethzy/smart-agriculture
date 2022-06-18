@@ -1,0 +1,17 @@
+import serial, string, time
+
+ser = serial.Serial('/dev/ttyACM0', 9600)
+
+while True:
+        if ser.in_waiting > 0:
+            rawserial = ser.readline()
+            cookedserial = rawserial.decode('utf-8').strip('\r\n')
+            datasplit = cookedserial.split(',')
+            temperature = datasplit[0].strip('<')
+            fdata = datasplit[1].split(';')
+            humidity = fdata[0]
+            sdata = fdata[1].split(':')
+            light = sdata[0]
+            moist = sdata[1].strip('>')
+            print(temperature)
+            print(humidity)

@@ -1,0 +1,26 @@
+import serial, string, time
+from firebase import firebase
+
+
+ser = serial.Serial('/dev/ttyACM0', 9600)
+firebase = firebase.FirebaseApplication('https://ghouse-3215e-default-rtdb.fire>
+
+while True:
+        if ser.in_waiting > 0:
+            rawserial = ser.readline()
+            cookedserial = rawserial.decode('utf-8').strip('\r\n')
+            datasplit = cookedserial.split(',')
+            temperature = int(datasplit[0].strip('<'))
+            fdata = datasplit[1].split(';')
+            humidity = int(fdata[0])
+            sdata = fdata[1].split(':')
+            light = int(sdata[0])
+            moist = int(sdata[1].strip('>'))
+            print(temperature)
+            print(humidity)
+            print(light)
+            print(moist)
+            firebase.post("/sensors/temp", temperature)
+            firebase.post("/sensors/humi", humidity)
+            firebase.post("/sensors/light", light)
+            firebase.post("/sensors/moist",moist)

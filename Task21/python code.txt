@@ -1,0 +1,41 @@
+from datetime import datetime
+from firebase import firebase
+from time import sleep
+import os
+
+import pyrebase
+import picamera
+
+firebaseConfig = {
+  'apiKey': "AIzaSyCoZqbwg-juL9LnQeY0Y40D3rb_QRF1LvM",
+  'authDomain': "smartgreenhouse-13d71.firebaseapp.com",
+  'databaseURL': "https://smartgreenhouse-13d71-default-rtdb.firebaseio.com",
+  'projectId': "smartgreenhouse-13d71",
+  'storageBucket': "smartgreenhouse-13d71.appspot.com",
+  'messagingSenderId': "1096594620458",
+  'appId': "1:1096594620458:web:335e829824e45cf66cc353",
+  'measurementId': "G-BB9LXEZ3WS"
+}
+
+firebase = pyrebase.initialize_app(firebaseConfig)
+
+storage = firebase.storage()
+
+while True:
+  try:
+     with picamera.PiCamera() as camera:
+        camera.start_preview()
+        print("pushed")
+        now = datetime.now()
+        dt = now.strftime("%d%m%Y%H:%M:%S")
+        name = dt+".jpg"
+        camera.capture(name)
+        print(name+" saved")
+        storage.child(name).put(name)
+        print("Image sent")
+        os.remove(name)
+        print("File Removed")
+        sleep(2)
+
+except:
+        camera.stop_preview()
