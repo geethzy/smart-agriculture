@@ -1,0 +1,67 @@
+import serial, string, time
+from firebase import firebase
+import os
+import datetime
+
+
+ser = serial.Serial('/dev/ttyACM0', 9600)
+firebase = firebase.FirebaseApplication('https://ghouse-3215e-default-rtdb.firebaseio.com/')
+
+def getCPUtemperature():
+    res = os.popen('vcgencmd measure_temp').readline()
+    return(res.replace("temp=","").replace("'C\n",""))
+
+while True:
+        if ser.in_waiting > 0:
+                rawserial = ser.readline()
+                cookedserial = rawserial.decode('utf-8').strip('\r\n')
+                datasplit = cookedserial.split(',')
+                temperature = int(datasplit[0].strip('<'))
+                fdata = datasplit[1].split(';')
+                humidity = int(fdata[0])
+                sdata = fdata[1].split(':')
+                light = int(sdata[0])
+                moist = int(sdata[1].strip('>'))
+                print(temperature)
+                print(humidity)
+                print(light)
+                print(moist)
+                firebase.post("/sensors/temp", temperature)
+                firebase.post("/sensors/humi", humidity)
+                firebase.post("/sensors/light", light)
+                firebase.post("/sensors/moist",moist)
+                dateString = '%d/%m/%Y %H:%M:%S'
+                firebase.post("/Settings/last_update_datetime", datetime.datetime.now().strftime(dateString))
+                maxLight = 300
+                minLight = 650
+                high = int(1)
+                low = int(3)
+                perfect = int(2)
+                lightStat = firebase.get("/lightRelay", None)
+                if lightStat ==1 or light >= minLight:
+                        ser.write(b'L_ON')
+                        if light >= minLight:
+                                firebase.post("/control/lightPosi", low)
+                elif lightStat ==0 or light <= maxLight:
+                        ser.write(b'L_OFF')
+                        if light <= maxLight:
+                                firebase.post("/control/lightPosi", high)
+                        else:
+                                firebase.post("/control/lightPosi", perfect)
+                else:
+                        print('ERROR')
+                maxMoist = 500
+                minMoist = 750
+                valveStat = firebase.get("/valveRelay", None)
+                if valveStat ==1 or moist >= minMoist:
+                        ser.write(b'V_ON')
+                        if moist >= minMoist:
+                                firebase.post("/control/valvePosi", low)
+                elif valveStat ==0 or moist <= maxMoist:
+                        ser.write(b'V_OFF')
+                        if moist <= maxMoist:
+                                firebase.post("/control/valvePosi", high)
+                        else:
+                                firebase.post("/control/valvePosi", perfect)
+                else:
+                        print('ERROR')

@@ -1,0 +1,62 @@
+import serial, string, time
+from firebase import firebase
+import os
+import datetime
+
+ser = serial.Serial('/dev/ttyACM0', 9600)
+firebase = firebase.FirebaseApplication('https://ghouse-3215e-default-rtdb.fire>
+
+def getCPUtemperature():
+    res = os.popen('vcgencmd measure_temp').readline()
+    return(res.replace("temp=","").replace("'C\n",""))
+
+def getRAMinfo():
+    p = os.popen('free')
+    i = 0
+    while 1:
+        i = i + 1
+        line = p.readline()
+        if i==2:
+            return(line.split()[1:4])
+while True:
+        if ser.in_waiting > 0:
+                rawserial = ser.readline()
+                cookedserial = rawserial.decode('utf-8').strip('\r\n')
+                datasplit = cookedserial.split(',')
+                temperature = int(datasplit[0].strip('<'))
+                fdata = datasplit[1].split(';')
+                humidity = int(fdata[0])
+                sdata = fdata[1].split(':')
+                light = int(sdata[0])
+                moist = int(sdata[1].strip('>'))
+                print(temperature)
+                print(humidity)
+                print(light)
+                print(moist)
+                firebase.post("/sensors/temp", temperature)
+                firebase.post("/sensors/humi", humidity)
+                firebase.post("/sensors/light", light)
+                firebase.post("/sensors/moist",moist)
+	                     dateString = '%d/%m/%Y %H:%M:%S'
+                firebase.post("/Settings/last_update_datetime", datetime.datetime.now().strftime(dateString))
+                lightStat = firebase.get("/lightRelay", None)
+                if lightStat == 1:
+                        print("high")
+                        ser.write(b'L_ON')
+                elif lightStat ==0:
+                        print("low")
+                        ser.write(b'L_OFF')
+                else:
+                        print("ERROR")
+
+---------------------------------------------------------------------------------------
+
+               CPU_temp = getCPUtemperature()
+                firebase.post("/Settings/cpuTemp", CPU_temp)
+                RAM_stats = getRAMinfo()
+                RAM_total = round(int(RAM_stats[0]) / 1000,1)
+                RAM_used = round(int(RAM_stats[1]) / 1000,1)
+                RAM_free = round(int(RAM_stats[2]) / 1000,1)
+                firebase.post("/Settings/free", str(RAM_free)+"")
+                firebase.post("/Settings/used", str(RAM_used)+"")
+                firebase.post("/Settings/total", str(RAM_total)+"")

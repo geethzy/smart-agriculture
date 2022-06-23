@@ -1,0 +1,152 @@
+import serial, string, time
+from firebase import firebase
+import os
+import datetime
+
+ser = serial.Serial('/dev/ttyACM0', 9600)
+firebase = firebase.FirebaseApplication('https://ghouse-3215e-default-rtdb.fire>
+
+def getCPUtemperature():
+    res = os.popen('vcgencmd measure_temp').readline()
+    return(res.replace("temp=","").replace("'C\n",""))
+
+def getRAMinfo():
+    p = os.popen('free')
+    i = 0
+    while 1:
+        i = i + 1
+        line = p.readline()
+        if i==2:
+            return(line.split()[1:4])
+
+while True:
+        if ser.in_waiting > 0:
+                rawserial = ser.readline()
+                cookedserial = rawserial.decode('utf-8').strip('\r\n')
+                datasplit = cookedserial.split(',')
+                temperature = int(datasplit[0].strip('<'))
+                fdata = datasplit[1].split(';')
+                humidity = int(fdata[0])
+                sdata = fdata[1].split(':')
+                light = int(sdata[0])
+                moist = int(sdata[1].strip('>'))
+                print(temperature)
+                print(humidity)
+                print(light)
+                print(moist)
+                firebase.post("/sensors/temp", temperature)
+                firebase.post("/sensors/humi", humidity)
+                firebase.post("/sensors/light", light)
+                firebase.post("/sensors/light", light)
+                firebase.post("/sensors/moist",moist)
+                dateString = '%d/%m/%Y %H:%M:%S'
+                firebase.post("/Settings/last_update_datetime", datetime.datetime.now().strftime(dateString))
+                		    
+    CPU_temp = getCPUtemperature()
+    firebase.put("/PI/CPU", "/temperature", CPU_temp)
+
+    #RAM INFO
+    RAM_stats = getRAMinfo()
+    RAM_total = round(int(RAM_stats[0]) / 1000,1)
+    RAM_used = round(int(RAM_stats[1]) / 1000,1)
+    RAM_free = round(int(RAM_stats[2]) / 1000,1)
+    firebase.put("/PI/RAM", "/free", str(RAM_free)+"")
+    firebase.put("/PI/RAM", "/used", str(RAM_used)+"")
+    firebase.put("/PI/RAM", "/total", str(RAM_total)+"")
+
+
+
+********************************************************************************
+                lightStat = firebase.get("/lightRelay", None)
+                if lightStat ==1:
+                        ser.write(b'L_ON')
+                else:
+                        ser.write(b'L_OFF')
+                maxLight = 300
+                minLight = 650
+                high = int(1)
+                low = int(3)
+                perfect = int(2)
+                if light <= maxLight:
+                        ser.write(b'L_OFF')
+                        firebase.post("/control/lightPosi", low)
+                elif light >= minLight:
+                        ser.write(b'L_ON')
+                        firebase.post("/control/lightPosi", high)
+                else:
+                        ser.write(b'L_OFF')
+                        firebase.post("/control/lightPosi", perfect)
+
+
+*********************************************************************
+
+                maxLight = 300
+                minLight = 650
+                high = int(1)
+                low = int(3)
+                perfect = int(2)
+                lightStat = firebase.get("/lightRelay", None)
+                if lightStat ==1 or light >= minLight:
+                        ser.write(b'L_ON')
+                        if light >= minLight:
+                                firebase.post("/control/lightPosi", low)
+                elif lightStat ==0 or light <= maxLight:
+                        ser.write(b'L_OFF')
+                        if light <= maxLight:
+                                firebase.post("/control/lightPosi", high)
+                        else:
+                                firebase.post("/control/lightPosi", perfect)
+                else:
+                        print('ERROR')
+
+----------------------------------------------
+from firebase import firebase
+import os
+import datetime
+
+ser = serial.Serial('/dev/ttyACM0', 9600)
+firebase = firebase.FirebaseApplication('https://ghouse-3215e-default-rtdb.firebaseio.com/')
+
+def getCPUtemperature():
+    res = os.popen('vcgencmd measure_temp').readline()
+    return(res.replace("temp=","").replace("'C\n",""))
+
+while True:
+        if ser.in_waiting > 0:
+                rawserial = ser.readline()
+                cookedserial = rawserial.decode('utf-8').strip('\r\n')
+                datasplit = cookedserial.split(',')
+                temperature = int(datasplit[0].strip('<'))
+                fdata = datasplit[1].split(';')
+                humidity = int(fdata[0])
+                sdata = fdata[1].split(':')
+                light = int(sdata[0])
+                moist = int(sdata[1].strip('>'))
+                print(temperature)
+                print(humidity)
+                print(light)
+                print(moist)
+                firebase.post("/sensors/temp", temperature)
+                firebase.post("/sensors/humi", humidity)
+                firebase.post("/sensors/light", light)
+                firebase.post("/sensors/moist",moist)
+                dateString = '%d/%m/%Y %H:%M:%S'
+                firebase.post("/Settings/last_update_datetime", datetime.datetime.now().strftime(dateString))
+                maxLight = 300
+                minLight = 650
+                high = int(1)
+                low = int(3)
+                perfect = int(2)
+                lightStat = firebase.get("/lightRelay", None)
+                if lightStat ==1 or light >= minLight:
+                        ser.write(b'L_ON')
+                        if light >= minLight:
+                                firebase.post("/control/lightPosi", low)
+                elif lightStat ==0 or light <= maxLight:
+                        ser.write(b'L_OFF')
+                        if light <= maxLight:
+                                firebase.post("/control/lightPosi", high)
+                        else:
+                                firebase.post("/control/lightPosi", perfect)
+                else:
+                        print('ERROR')

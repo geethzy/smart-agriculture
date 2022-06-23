@@ -1,0 +1,59 @@
+from datetime import datetime
+from firebase import firebase
+from time import sleep
+import os
+
+import pyrebase
+import picamera
+
+firebaseConfig = {
+        'apiKey': "AIzaSyA8tXTFoe_k299y9Cr6rAbxOHge3CrUFxQ",
+        'authDomain': "ghouse-3215e.firebaseapp.com",
+        'databaseURL': "https://ghouse-3215e-default-rtdb.firebaseio.com",
+        'projectId': "ghouse-3215e",
+        'storageBucket': "ghouse-3215e.appspot.com",
+        'messagingSenderId': "449512899037",
+        'appId': "1:449512899037:web:976a6691c8e76d8e4e3634",
+        'measurementId': "G-KV553HBXYB"
+}
+
+firebase = firebase.FirebaseApplication('https://ghouse-3215e-default-rtdb.firebaseio.com/')
+firebaser = pyrebase.initialize_app(firebaseConfig)
+storage = firebaser.storage()
+
+while True:
+	try:
+		with picamera.PiCamera() as camera:
+			auth = firebase.auth()
+			email = "geethcyjjy@gmail.com"
+			password = "iot123"
+			user = auth.sign_in_with_email_and_password(email, password)
+			camera.start_preview()
+			print("pushed")
+			now = datetime.now()
+			dt = now.strftime("%d%m%Y%H:%M:%S")
+			name = dt + ".jpg"
+			camera.capture(name)	
+			print(name+" saved")
+			storage.child(name).put(name)
+			print("Image sent")
+			imageUrl = storage.child(name).get_url(user['idToken'])
+			print(imageUrl)
+			firebase.post("/picam/images", imageUrl)
+			os.remove(name)
+			print("File Removed")
+			sleep(3)
+		except:
+			camera.stop_preview()
+-----------------------------
+//get image
+const imgElement = document.getElementById('urli');
+const imgRef = database.ref('picam').child('images');
+imgRef.limitToLast(1).on('value', function(snapshot) {
+    snapshot.forEach(function(childSnapshot) {
+        var childData = childSnapshot.val();
+        console.log("cputemp: " + childData);
+        //imgElement.innerText = childData;
+        img.src = childData; 
+    });
+});
