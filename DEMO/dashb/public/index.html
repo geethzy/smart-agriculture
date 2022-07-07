@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>IoT Demo</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/4.8.1/firebase.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.3/font/bootstrap-icons.css">
+    <link rel="stylesheet"
+              href="https://unpkg.com/bootstrap-material-design@4.1.1/dist/css/bootstrap-material-design.min.css"
+              integrity="sha384-wXznGJNEXNG1NFsbm0ugrLFMQPWswR3lds2VeinahP8N0zJw9VWSopbjv2x7WCvX"
+              crossorigin="anonymous">
+    <link rel="stylesheet" href="style.css"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js"></script>
+  </head>
+  <body>
+
+<!--header-->
+    <div class="container-fluid text-center" style="background-color: #4C3A51;">
+        <h1 class="text-white" >IoT Greenhouse</h1>
+        <p class="text-white"><img src="img/updated.png" width="20" height="20" class="d-inline-block align-top" alt="">Last update on:
+        <span id="getTime" class="text-white">Checking the last updated time</span></p>
+    </div>
+
+    <div class="container-fluid">
+      <div class="row">
+<!--sensors column-->
+        <div class="col-lg-6 col-md-12">
+          <div class="text-center mysection mb-3 mt-3">
+            <h><b><big>Sensors</big></b></h>
+            <hr>
+<!--temp & humi row-->
+            <div class="row justify-content-center"> 
+              <div class="col-lg-6 col-md-12"><!--temp-->
+                <div class="card mb-3 mt-3 mx-auto" style="max-width: 16rem; max-height: 12rem; border-width: 10px; border-radius: 25px; padding: 15px; background-color: #f3e9f7;">
+                  <div style="font-size: 18px;" class="card-header text-center"><img src="img/temp.png" width="30" height="30" class="d-inline-block align-top" alt="">Temperature(°C)
+                  </div>
+                  <div class="card-body">
+                    <h1 id="temperature" style="font-size: 60px;" class="card-title text-center"><span>°C</span></h1>
+                  </div>
+                </div>
+              </div>
+              <div class="col-lg-6 col-md-12"><!--hum-->
+                <div class="card mb-3 mt-3 mx-auto" style="max-width: 16rem; max-height: 12rem; border-width: 10px; border-radius: 25px; padding: 15px; background-color: #f3e9f7;">
+                  <div style="font-size: 18px;" class="card-header text-center"><img src="img/humi.png" width="30" height="30" class="d-inline-block align-top" alt="">Humidity(%)
+                  </div>
+                  <div class="card-body">
+                    <h1 id="humidity" style="font-size: 60px;" class="card-title text-center"><span>%</span></h1>
+                  </div>
+                </div>
+              </div>
+            </div>
+<!--ligh & moist row-->
+            <div class="row justify-content-center">
+              <div class="col-lg-6 col-md-12"><!--light-->
+                <div class="card mb-3 mt-3 mx-auto" style="max-width: 16rem; max-height: 12rem; border-width: 10px; border-radius: 25px; padding: 15px; background-color: #f3e9f7;">
+                  <div style="font-size: 18px;" class="card-header text-center"><img src="img/ligh.png" width="30" height="30" class="d-inline-block align-top" alt="">Light Intensity
+                  </div>
+                  <div class="card-body">
+                    <h1 id="intensity" style="font-size: 60px;" class="card-title text-center"><span>X</span></h1>
+                  </div>
+                </div>
+              </div>
+              <div class="col-lg-6 col-md-12"><!--moist-->
+                <div class="card mb-3 mt-3 mx-auto" style="max-width: 16rem; max-height: 12rem; border-width: 10px; border-radius: 25px; padding: 15px; background-color: #f3e9f7;">
+                  <div style="font-size: 18px;" class="card-header text-center"><img src="img/soil.png" width="30" height="30" class="d-inline-block align-top" alt="">Soil Moisture
+                  </div>
+                  <div class="card-body">
+                    <h1 id="moisture" style="font-size: 60px;" class="card-title text-center"><span>X</span></h1>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+<!--photo col-->
+          <div class="text-center mysection mb-2 mt-2 justify-content-center" style="padding: 35px;"><!--image-->
+            <h><b><big>Photos</big></b></h>
+            <hr>
+            <div class="card mb-3 mt-3 mx-auto" style="max-width: 36rem; max-height: 30rem; border-width: 10px; border-radius: 25px; padding: 15px; background-color: #ADCF9F;">
+              <div style="font-size: 18px;" class="card-header text-center"><img src="img/cam.png" width="40" height="40" class="d-inline-block align-top" alt=""><!--<button type="button" onclick="getPIc()" class="btn btn-warning btn-rounded">Refresh</button>--><p>Live Photo</p></div>
+              <div class="card-body">
+              <p></p>
+              <p><img id="img" src="img/loadi.gif" width="500px"></p>
+              <!--<p>Last picture taken: <span id="date-time"></span></p>-->
+              <p id="urli"></p>
+              <p></p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-6 col-md-12">
+<!--Mode column-->
+          <div class="text-center mysection mb-2 mt-3">
+            <label><input type="radio" name="colorRadio" value="manual"><h><b><big>Manual Mode  </big></b></h></label>
+            <span></span>
+            <span></span>
+            <label><input type="radio" name="colorRadio" value="auto"><h><b><big>Automatic Mode </big></b></h></label>
+            <hr>
+<!--Manual mode column-->
+            <div class="red box" style="display: none;">       
+              <div class="row">
+                <div class="col-lg-6 col-md-12 justify-content-center"><!--light-->
+                  <div class="card mb-3 mt-3 mx-auto" style="max-width: 17rem; max-height: 7rem; border-width: 10px; border-radius: 25px; padding: 15px; background-color: #C6DCE4;">
+                    <div class="row"><img src="img/bulb.png" width="60" height="60" class="d-inline-block align-top ml-3" alt="">
+                      <label class="switch">
+                      <input type="checkbox" id="ligtog" checked>
+                        <span class="slider round"></span>
+                      </label>
+                      <br>
+                      <p class="lightText" style="font-size: 20px;">&nbsp;&nbsp;&nbsp;Checking the light Status...</p>  
+                    </div>
+                  </div>
+                </div>
+                <div class="col-lg-6 col-md-12 justify-content-center"><!--valve-->
+                  <div class="card text-center mb-3 mt-3 mx-auto" style="max-width: 17rem; max-height: 7rem; border-width: 10px; border-radius: 25px; padding: 15px; background-color: #C6DCE4;">
+                    <div class="row "><img src="img/valve.png" width="60" height="60" class="d-inline-block align-top ml-3" alt="">
+                      <label class="switch">
+                      <input type="checkbox" id="valtog" checked>
+                        <span class="slider round"></span>
+                      </label>
+                      <br>
+                     <p class="valveText" style="font-size: 20px;">&nbsp;&nbsp;&nbsp;Checking the valve Status...</p>  
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+<!--Auto mode column--> 
+            <div class="green box" style="display: none;">
+              <div class="row">
+                <div class="col-lg-6 col-md-12">
+                  <div class="row"><img class="gif info-gif mb-5 mt-5 mx-auto" height="55" width="55" src="img/idea.gif">
+                    <div class="card mb-3 mt-3 mx-auto" style="max-width: 18rem; max-height: 9rem; border-width: 10px; border-radius: 25px; padding: 30px; background-color: #B7E5DD;">
+                      <h1 id="intensityText" class="text-center" style="font-size: 20px;"><span>&nbsp;&nbsp;&nbsp;Checking the light intensity...</span></h1>  
+                    </div>
+                  </div>
+                </div>
+                <div class="col-lg-6 col-md-12"><!--moisture sensing-->
+                  <div class="row"><img class="gif info-gif mb-5 mt-5 mx-auto" height="50" width="50" src="img/tap.gif">
+                    <div class="card text-center mb-3 mt-3 mx-auto" style="max-width: 18rem; max-height: 13rem; border-width: 10px; border-radius: 25px; padding: 25px; background-color: #B7E5DD;">
+                      <h1 id="moistureText" class="text-center" style="font-size: 20px;"><span>&nbsp;&nbsp;&nbsp;Checking the soil moisture...</span></h1>
+                    </div>
+                  </div>
+                </div>    
+              </div>
+            </div>
+<!--None mode column--> 
+            <div class="nonmode">
+              <div class="row">
+                <div class="col-lg-12 col-md-12 justify-content-center"><!--light-->
+                  <div class="card mb-3 mt-3 mx-auto" style="max-width: 60rem; max-height: 7rem; border-width: 10px; border-radius: 25px; padding: 15px; background-color: #E4CDA7;">
+                    <div class="row"><img src="img/bulb.png" width="60" height="60" class="d-inline-block align-top ml-3" alt=""><img src="img/valve.png" width="60" height="60" class="d-inline-block align-top ml-3" alt="">
+                      <p style="font-size: 25px;">&nbsp;&nbsp;&nbsp;Control actuators from here...</p>  
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+<!--Settings column-->
+          <div class="text-center mysection mb-2 mt-3">
+            <h><b><big>Settings</big></b></h>
+            <hr>
+            <div class="row">
+              <div class="col-lg-6 col-md-12 justify-content-center">
+                <div class="card mytemp mb-3 mt-3 mx-auto" style="max-width: 20rem; max-height:10rem; border-width: 10px; border-radius: 25px; padding: 15px; background-color: #F9F2ED;">
+                  <div style="font-size: 16px;" class="card-header text-center"><img src="img/proc.png" width="30" height="30" class="d-inline-block align-top" alt="">CPU Temperature(°C)
+                  </div>
+                  <div class="card-body">
+                    <h1 id="cputemp" style="font-size: 19px;" class="card-title text-center"><span>Checking CPU temperature...</span></h1>
+                  </div>
+                </div>
+              </div>
+              <div class="col-lg-6 col-md-12 justify-content-center">
+                <div class="card mytemp mb-3 mt-3 mx-auto" style="max-width: 20rem; max-height:10rem; border-width: 10px; border-radius: 25px; padding: 15px; background-color: #F9F2ED;">
+                  <div style="font-size: 16px;" class="card-header text-center"><img src="img/pi.png" width="30" height="30" class="d-inline-block align-top" alt="">Status
+                  </div>
+                  <div class="card-body">
+                    <h1 style="font-size: 19px;" class="line" class="card-title text-center"><span>OFFLINE</span></h1>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-lg-6 col-md-12 justify-content-center">
+                <div class="card mb-3 mt-3 mx-auto" style="max-width: 20rem; max-height: 18rem; border-width: 10px; border-radius: 25px; padding: 15px; background-color: #F9F2ED;">
+                  <div style="font-size: 16px;" class="card-header text-center"><img src="img/ram.png" width="30" height="30" class="d-inline-block align-top" alt="">RAM Usage
+                  </div>
+                  <div class="card-body">
+                    <canvas id="chart" width="1600" height="900"></canvas>
+                  </div>
+                </div>           
+              </div>
+              <div class="col-lg-6 col-md-12 justify-content-center">
+                <div class="card mb-3 mt-3 mx-auto" style="max-width: 20rem; max-height: 18rem; border-width: 10px; border-radius: 25px; padding: 15px; background-color: #F9F2ED;">
+                  <div style="font-size: 16px;" class="card-header text-center"><img src="img/pie.png" width="30" height="25" class="d-inline-block align-top" alt="">Disk Space
+                  </div>
+                  <div class="card-body">
+                    <canvas id="chart2" width="1600" height="900"></canvas>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="text-center mysection mb-2 mt-3">
+            <img src="img/logo.jpg" alt="Girl in a jacket" width="500" height="270">
+          </div>
+        </div>
+      </div>
+    </div>   
+<!--footer-->
+    <div class="container-fluid text-center" style="background-color: #4C3A51;">
+        <h1 class="text-white" >SLIoT Lab</h1>
+    </div>
+    <script src="index.js"></script>
+  </body>
+</html>

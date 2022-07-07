@@ -1,0 +1,47 @@
+// Get a reference to the storage service, which is used to create references in your storage bucket
+var storage = firebase.storage();
+
+// Create a storage reference from our storage service
+var storageRef = storage.ref();
+
+// Reference to Picture Storage Path
+var imgRef = storageRef.child('2106202210:57:07.jpg');
+imgRef.getDownloadURL().then(url => { 
+    img.src = url; 
+}); 
+
+
+imgRef.getMetadata()
+  .then((metadata) => {
+    console.log(metadata);
+    date = new Date(metadata.timeCreated);
+    console.log(date.getFullYear()+'-' + (date.getMonth()+1) + '-'+date.getDate());
+    console.log(date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds());
+    var time = (date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds());
+    var writtenDate = (date.getFullYear()+'-' + (date.getMonth()+1) + '-'+date.getDate());
+    document.getElementById("date-time").innerHTML = time + " at " + writtenDate;
+  })
+  .catch((error)=> {
+    console.error(error);
+  });
+
+
+
+----------------------------------------------------
+
+
+var storage = firebase.storage();
+
+    var database = firebase.database();
+
+// Create a storage reference from our storage service
+var storageRef = storage.ref();
+var tempRef = database.ref('photo');
+
+// Reference to Picture Storage Path
+var imgRef = storageRef.child('test.jpg');
+imgRef.getDownloadURL().then(url => { 
+    urli.innerHTML = url ;
+    phoRef.set({pp: url});
+    img.src = url; 
+}); 

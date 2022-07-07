@@ -1,0 +1,335 @@
+-------------------------------------------------------
+monitor sensor data & light logic
+ senlig.py
+-------------------------------------------------------
+import serial, string, time
+from firebase import firebase
+import os
+import datetime
+
+ser = serial.Serial('/dev/ttyACM0', 9600)
+firebase = firebase.FirebaseApplication('https://ghouse-3215e-default-rtdb.firebaseio.com/')
+
+def getCPUtemperature():
+    res = os.popen('vcgencmd measure_temp').readline()
+    return(res.replace("temp=","").replace("'C\n",""))
+
+while True:
+        if ser.in_waiting > 0:
+                rawserial = ser.readline()
+                cookedserial = rawserial.decode('utf-8').strip('\r\n')
+                datasplit = cookedserial.split(',')
+                temperature = int(datasplit[0].strip('<'))
+                fdata = datasplit[1].split(';')
+                humidity = int(fdata[0])
+                sdata = fdata[1].split(':')
+                light = int(sdata[0])
+                moist = int(sdata[1].strip('>'))
+                print(temperature)
+                print(humidity)
+                print(light)
+                print(moist)
+                firebase.post("/sensors/temp", temperature)
+                firebase.post("/sensors/humi", humidity)
+                firebase.post("/sensors/light", light)
+                firebase.post("/sensors/moist",moist)
+                dateString = '%d/%m/%Y %H:%M:%S'
+                firebase.post("/Settings/last_update_datetime", datetime.datetime.now().strftime(dateString))
+                maxLight = 300
+                minLight = 650
+                high = int(1)
+                low = int(3)
+                perfect = int(2)
+                lightStat = firebase.get("/lightRelay", None)
+                if lightStat ==1 or light >= minLight:
+                        ser.write(b'L_ON')
+                        if light >= minLight:
+                                firebase.post("/control/lightPosi", low)
+                elif lightStat ==0 or light <= maxLight:
+                        ser.write(b'L_OFF')
+                        if light <= maxLight:
+                                firebase.post("/control/lightPosi", high)
+                        else:
+                                firebase.post("/control/lightPosi", perfect)
+                else:
+                        print('ERROR')
+
+------------------------------------------
+ imagest.py
+(upload images to sleep 3)
+------------------------------------------
+from datetime import datetime
+from firebase import firebase
+from time import sleep
+import os
+
+import pyrebase
+import picamera
+
+firebaseConfig = {
+        'apiKey': "AIzaSyA8tXTFoe_k299y9Cr6rAbxOHge3CrUFxQ",
+        'authDomain': "ghouse-3215e.firebaseapp.com",
+        'databaseURL': "https://ghouse-3215e-default-rtdb.firebaseio.com",
+        'projectId': "ghouse-3215e",
+        'storageBucket': "ghouse-3215e.appspot.com",
+        'messagingSenderId': "449512899037",
+        'appId': "1:449512899037:web:976a6691c8e76d8e4e3634",
+        'measurementId': "G-KV553HBXYB"
+}
+
+firebase = firebase.FirebaseApplication('https://ghouse-3215e-default-rtdb.firebaseio.com/')
+firebaser = pyrebase.initialize_app(firebaseConfig)
+storage = firebaser.storage()
+
+while True:
+	try:
+		with picamera.PiCamera() as camera:
+			auth = firebase.auth()
+			email = "geethcyjjy@gmail.com"
+			password = "iot123"
+			user = auth.sign_in_with_email_and_password(email, password)
+			camera.start_preview()
+			print("pushed")
+			now = datetime.now()
+			dt = now.strftime("%d%m%Y%H:%M:%S")
+			name = dt + ".jpg"
+			camera.capture(name)	
+			print(name+" saved")
+			storage.child(name).put(name)
+			print("Image sent")
+			imageUrl = storage.child(name).get_url(user['idToken'])
+			print(imageUrl)
+			firebase.post("/picam/images", imageUrl)
+			os.remove(name)
+			print("File Removed")
+			sleep(3)
+		except:
+			camera.stop_preview()
+--------------------------------------------------------------
+sett.py upload settings to firebase
+--------------------------------------------------------------
+import serial, string, time
+from firebase import firebase
+import os
+import datetime
+
+ser = serial.Serial('/dev/ttyACM0', 9600)
+firebase = firebase.FirebaseApplication('https://ghouse-3215e-default-rtdb.firebaseio.com/')
+
+def getCPUtemperature():
+    res = os.popen('vcgencmd measure_temp').readline()
+    return(res.replace("temp=","").replace("'C\n",""))
+
+def getRAMinfo():
+    p = os.popen('free')
+    i = 0
+    while 1:
+        i = i + 1
+        line = p.readline()
+        if i==2:
+            return(line.split()[1:4])
+
+def getDiskSpace():
+    p = os.popen("df -h /")
+    i = 0
+    while 1:
+        i = i +1
+        line = p.readline()
+        if i==2:
+            return(line.split()[1:5])
+
+while True:
+        if ser.in_waiting > 0:
+                rawserial = ser.readline()
+                cookedserial = rawserial.decode('utf-8').strip('\r\n')
+                datasplit = cookedserial.split(',')
+                temperature = int(datasplit[0].strip('<'))
+                fdata = datasplit[1].split(';')
+                humidity = int(fdata[0])
+                sdata = fdata[1].split(':')
+                light = int(sdata[0])
+                moist = int(sdata[1].strip('>'))
+                print(temperature)
+                print(humidity)
+                print(light)
+                print(moist)
+                firebase.post("/sensors/temp", temperature)
+                firebase.post("/sensors/humi", humidity)
+                firebase.post("/sensors/light", light)
+                firebase.post("/sensors/moist",moist)
+                dateString = '%d/%m/%Y %H:%M:%S'
+                firebase.post("/Settings/last_update_datetime", datetime.datetime.now().strftime(dateString))
+                cpu_Temp = getCPUtemperature()
+                firebase.post("/Settings/cpuTemp", cpu_Temp)
+                RAM_stats = getRAMinfo()
+                RAM_total = round(int(RAM_stats[0]) / 1000,1)
+                RAM_used = round(int(RAM_stats[1]) / 1000,1)
+                RAM_free = round(int(RAM_stats[2]) / 1000,1)
+                firebase.post("/Settings/free", str(RAM_free)+"")
+                firebase.post("/Settings/used", str(RAM_used)+"")
+                firebase.post("/Settings/total", str(RAM_total)+"")
+                DISK_stats = getDiskSpace()
+                DISK_total = DISK_stats[0]
+                DISK_free = DISK_stats[1]
+                DISK_perc = DISK_stats[3]
+                DISK_used = float(DISK_total[:-1]) - float(DISK_free[:-1])
+                firebase.post("/Settings/dtotal", str(DISK_total[:-1]))
+                firebase.post("/Settings/dfree", str(DISK_free[:-1]))
+                firebase.post("/Settings/dused", str(DISK_used))
+---------------------------------------------------------------------------
+test.py () (light logic in 2 parts, but not efficient)
+---------------------------------------------------------------------------
+import serial, string, time
+from firebase import firebase
+import os
+import datetime
+
+ser = serial.Serial('/dev/ttyACM0', 9600)
+firebase = firebase.FirebaseApplication('https://ghouse-3215e-default-rtdb.firebaseio.com/')
+
+def getCPUtemperature():
+    res = os.popen('vcgencmd measure_temp').readline()
+    return(res.replace("temp=","").replace("'C\n",""))
+
+while True:
+        if ser.in_waiting > 0:
+                lightStat = firebase.get("/lightRelay", None)
+                if lightStat ==1:
+                        ser.write(b'L_ON')
+                elif lightStat ==0:
+                        ser.write(b'L_OFF')
+                else:
+                        print('ERROR')
+                rawserial = ser.readline()
+                cookedserial = rawserial.decode('utf-8').strip('\r\n')
+               datasplit = cookedserial.split(',')
+                temperature = int(datasplit[0].strip('<'))
+                fdata = datasplit[1].split(';')
+                humidity = int(fdata[0])
+                sdata = fdata[1].split(':')
+                light = int(sdata[0])
+                moist = int(sdata[1].strip('>'))
+                print(temperature)
+                print(humidity)
+                print(light)
+                print(moist)
+                firebase.post("/sensors/temp", temperature)
+                firebase.post("/sensors/humi", humidity)
+                firebase.post("/sensors/light", light)
+                firebase.post("/sensors/moist",moist)
+                dateString = '%d/%m/%Y %H:%M:%S'
+                firebase.post("/Settings/last_update_datetime", datetime.datetime.now().strftime(dateString))
+                maxLight = 300
+                minLight = 650
+                high = int(1)
+                low = int(3)
+                perfect = int(2)
+                if light >= minLight:
+                        ser.write(b'L_ON')
+                        firebase.post("/control/lightPosi", low)
+                elif light <= maxLight:
+                        ser.write(b'L_OFF')
+                        firebase.post("/control/lightPosi", high)
+                else:
+                        firebase.post("/control/lightPosi", perfect)
+
+--------------------------------------------------------------
+topi.py light,senor,camera sleep(3) ---too slow
+--------------------------------------------------------------
+import serial, string, time
+from firebase import firebase
+import os
+from datetime import datetime
+from time import sleep
+import pyrebase
+import picamera
+
+firebaseConfig = {
+        'apiKey': "AIzaSyA8tXTFoe_k299y9Cr6rAbxOHge3CrUFxQ",
+        'authDomain': "ghouse-3215e.firebaseapp.com",
+        'databaseURL': "https://ghouse-3215e-default-rtdb.firebaseio.com",
+        'projectId': "ghouse-3215e",
+        'storageBucket': "ghouse-3215e.appspot.com",
+        'messagingSenderId': "449512899037",
+        'appId': "1:449512899037:web:976a6691c8e76d8e4e3634",
+        'measurementId': "G-KV553HBXYB"
+}
+ser = serial.Serial('/dev/ttyACM0', 9600)
+firebase = firebase.FirebaseApplication('https://ghouse-3215e-default-rtdb.firebaseio.com/')
+
+firebaser = pyrebase.initialize_app(firebaseConfig)
+storage = firebaser.storage()
+
+def getCPUtemperature():
+    res = os.popen('vcgencmd measure_temp').readline()
+    return(res.replace("temp=","").replace("'C\n",""))
+
+while True:
+        if ser.in_waiting > 0:
+                rawserial = ser.readline()
+                cookedserial = rawserial.decode('utf-8').strip('\r\n')
+                datasplit = cookedserial.split(',')
+                temperature = int(datasplit[0].strip('<'))
+                fdata = datasplit[1].split(';')
+                humidity = int(fdata[0])
+                sdata = fdata[1].split(':')
+                light = int(sdata[0])
+                moist = int(sdata[1].strip('>'))
+                print(temperature)
+                print(humidity)
+                print(light)
+                print(moist)
+                firebase.post("/sensors/temp", temperature)
+                firebase.post("/sensors/humi", humidity)
+                firebase.post("/sensors/light", light)
+                firebase.post("/sensors/moist",moist)
+                dateString = '%d/%m/%Y %H:%M:%S'
+                #firebase.post("/Settings/last_update_datetime", datetime.datetime.now().strftime(dateString))
+                maxLight = 300
+                minLight = 650
+                high = int(1)
+                low = int(3)
+                perfect = int(2)
+                lightStat = firebase.get("/lightRelay", None)
+                if lightStat ==1 or light >= minLight:
+                        ser.write(b'L_ON')
+                        if light >= minLight:
+                                firebase.post("/control/lightPosi", low)
+                elif lightStat ==0 or light <= maxLight:
+                        ser.write(b'L_OFF')
+                        if light <= maxLight:
+                                firebase.post("/control/lightPosi", high)
+                        else:
+                                firebase.post("/control/lightPosi", perfect)
+               else:
+                        print('ERROR')
+                try:
+                        with picamera.PiCamera() as camera:
+                                auth = firebaser.auth()
+                                email = "geethcyjjy@gmail.com"
+                                password = "iot123"
+                                user = auth.sign_in_with_email_and_password(email, password)
+                                camera.start_preview()
+                                print("pushed")
+                                now = datetime.now()
+                                dt = now.strftime("%d%m%Y%H:%M:%S")
+                                name = dt + ".jpg"
+                                camera.capture(name)
+                                print(name+" saved")
+                                storage.child(name).put(name)
+                                print("Image sent")
+                                imageUrl = storage.child(name).get_url(user['idToken'])
+                                print(imageUrl)
+                                firebase.post("/picam/images", imageUrl)
+                                os.remove(name)
+                                print("File Removed")
+                                sleep(3)
+                except:
+                        camera.stop_preview()
+
+
+
+
+
+
+
